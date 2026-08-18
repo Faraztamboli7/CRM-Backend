@@ -18,45 +18,40 @@ const {
 router.get(
     "/dashboard",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     getDashboardReport
 );
 
-
-// Lead analytics
+// Lead analytics - ADMIN ONLY
 router.get(
     "/leads",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER"),
+    authorize("ADMIN"),
     getLeadReport
 );
 
-
-// Sales analytics
+// Sales analytics - ADMIN ONLY
 router.get(
     "/sales",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER"),
+    authorize("ADMIN"),
     getSalesReport
 );
 
-
-// Salesperson performance
+// Salesperson performance - ADMIN ONLY
 router.get(
     "/performance",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER"),
+    authorize("ADMIN"),
     getPerformanceReport
 );
 
-
-// Follow-up analytics
+// Follow-up analytics - ADMIN ONLY
 router.get(
     "/follow-ups",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER"),
+    authorize("ADMIN"),
     getFollowUpReport
 );
-
 
 module.exports = router;

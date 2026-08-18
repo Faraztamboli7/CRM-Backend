@@ -19,7 +19,7 @@ const {
 router.post(
     "/",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     createNotification
 );
 

@@ -13,50 +13,44 @@ const authorize = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-
 // CREATE
 router.post(
     "/",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     createDeal
 );
-
 
 // GET ALL
 router.get(
     "/",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     getDeals
 );
-
 
 // GET ONE
 router.get(
     "/:id",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     getDealById
 );
-
 
 // UPDATE
 router.put(
     "/:id",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     updateDeal
 );
 
-
-// DELETE
+// DELETE - ADMIN ONLY
 router.delete(
     "/:id",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER"),
+    authorize("ADMIN"),
     deleteDeal
 );
-
 
 module.exports = router;

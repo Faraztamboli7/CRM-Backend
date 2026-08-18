@@ -6,78 +6,215 @@ const pool = require("../config/db");
 
 const getDashboardReport = async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT
-                (SELECT COUNT(*) FROM leads) AS total_leads,
 
-                (SELECT COUNT(*) FROM customers) AS total_customers,
+        // =============================================
+        // ADMIN DASHBOARD
+        // =============================================
 
-                (SELECT COUNT(*) FROM deals) AS total_deals,
+        if (req.user.role === "ADMIN") {
 
-                (
-                    SELECT COUNT(*)
-                    FROM deals
-                    WHERE UPPER(stage) = 'CLOSED_WON'
-                ) AS won_deals,
+            const result = await pool.query(`
+                SELECT
+                    (SELECT COUNT(*) FROM leads) AS total_leads,
 
-                (
-                    SELECT COUNT(*)
-                    FROM deals
-                    WHERE UPPER(stage) = 'CLOSED_LOST'
-                ) AS lost_deals,
+                    (SELECT COUNT(*) FROM customers) AS total_customers,
 
-                (SELECT COUNT(*) FROM sales) AS total_sales,
+                    (SELECT COUNT(*) FROM deals) AS total_deals,
 
-                (
-                    SELECT COALESCE(SUM(final_amount), 0)
-                    FROM sales
-                ) AS total_revenue,
+                    (
+                        SELECT COUNT(*)
+                        FROM deals
+                        WHERE UPPER(stage) = 'CLOSED_WON'
+                    ) AS won_deals,
 
-                (
-                    SELECT COUNT(*)
-                    FROM follow_ups
-                    WHERE completed_at IS NULL
-                ) AS pending_follow_ups,
+                    (
+                        SELECT COUNT(*)
+                        FROM deals
+                        WHERE UPPER(stage) = 'CLOSED_LOST'
+                    ) AS lost_deals,
 
-                (
-                    SELECT COUNT(*)
-                    FROM follow_ups
-                    WHERE completed_at IS NULL
-                    AND scheduled_at < CURRENT_TIMESTAMP
-                ) AS overdue_follow_ups
-        `);
+                    (SELECT COUNT(*) FROM sales) AS total_sales,
 
-        const data = result.rows[0];
+                    (
+                        SELECT COALESCE(SUM(final_amount), 0)
+                        FROM sales
+                    ) AS total_revenue,
 
-        const totalLeads = Number(data.total_leads);
-        const wonDeals = Number(data.won_deals);
+                    (
+                        SELECT COUNT(*)
+                        FROM follow_ups
+                        WHERE completed_at IS NULL
+                    ) AS pending_follow_ups,
 
-        const conversionRate =
-            totalLeads > 0
-                ? Number(((wonDeals / totalLeads) * 100).toFixed(2))
-                : 0;
+                    (
+                        SELECT COUNT(*)
+                        FROM follow_ups
+                        WHERE completed_at IS NULL
+                        AND scheduled_at < CURRENT_TIMESTAMP
+                    ) AS overdue_follow_ups
+            `);
 
-        res.status(200).json({
-            success: true,
-            message: "Dashboard report fetched successfully",
-            data: {
-                total_leads: totalLeads,
-                total_customers: Number(data.total_customers),
-                total_deals: Number(data.total_deals),
-                won_deals: wonDeals,
-                lost_deals: Number(data.lost_deals),
-                total_sales: Number(data.total_sales),
-                total_revenue: Number(data.total_revenue),
-                pending_follow_ups: Number(data.pending_follow_ups),
-                overdue_follow_ups: Number(data.overdue_follow_ups),
-                conversion_rate: conversionRate
-            }
+            const data = result.rows[0];
+
+            const totalLeads = Number(data.total_leads);
+            const wonDeals = Number(data.won_deals);
+
+            const conversionRate =
+                totalLeads > 0
+                    ? Number(((wonDeals / totalLeads) * 100).toFixed(2))
+                    : 0;
+
+            return res.status(200).json({
+                success: true,
+                message: "Admin dashboard report fetched successfully",
+                data: {
+                    total_leads: totalLeads,
+                    total_customers: Number(data.total_customers),
+                    total_deals: Number(data.total_deals),
+                    won_deals: wonDeals,
+                    lost_deals: Number(data.lost_deals),
+                    total_sales: Number(data.total_sales),
+                    total_revenue: Number(data.total_revenue),
+                    pending_follow_ups: Number(data.pending_follow_ups),
+                    overdue_follow_ups: Number(data.overdue_follow_ups),
+                    conversion_rate: conversionRate
+                }
+            });
+        }
+
+
+        // =============================================
+        // SALES PERSON DASHBOARD
+        // =============================================
+
+        if (req.user.role === "SALES_PERSON") {
+
+            const userId = req.user.id;
+
+            const result = await pool.query(`
+                SELECT
+
+                    -- Leads
+                    (
+                        SELECT COUNT(*)
+                        FROM leads
+                        WHERE assigned_to = $1
+                    ) AS total_leads,
+
+                    -- Contacts
+                    (
+                        SELECT COUNT(*)
+                        FROM contacts
+                        WHERE owner_id = $1
+                    ) AS total_contacts,
+
+                    -- Customers
+                    (
+                        SELECT COUNT(*)
+                        FROM customers
+                        WHERE assigned_to = $1
+                    ) AS total_customers,
+
+                    -- Deals
+                    (
+                        SELECT COUNT(*)
+                        FROM deals
+                        WHERE assigned_to = $1
+                    ) AS total_deals,
+
+                    -- Won deals
+                    (
+                        SELECT COUNT(*)
+                        FROM deals
+                        WHERE assigned_to = $1
+                        AND UPPER(stage) = 'CLOSED_WON'
+                    ) AS won_deals,
+
+                    -- Lost deals
+                    (
+                        SELECT COUNT(*)
+                        FROM deals
+                        WHERE assigned_to = $1
+                        AND UPPER(stage) = 'CLOSED_LOST'
+                    ) AS lost_deals,
+
+                    -- Sales
+                    (
+                        SELECT COUNT(*)
+                        FROM sales
+                        WHERE assigned_to = $1
+                    ) AS total_sales,
+
+                    -- Revenue
+                    (
+                        SELECT COALESCE(SUM(final_amount), 0)
+                        FROM sales
+                        WHERE assigned_to = $1
+                    ) AS total_revenue,
+
+                    -- Pending follow-ups
+                    (
+                        SELECT COUNT(*)
+                        FROM follow_ups
+                        WHERE assigned_to = $1
+                        AND completed_at IS NULL
+                    ) AS pending_follow_ups,
+
+                    -- Overdue follow-ups
+                    (
+                        SELECT COUNT(*)
+                        FROM follow_ups
+                        WHERE assigned_to = $1
+                        AND completed_at IS NULL
+                        AND scheduled_at < CURRENT_TIMESTAMP
+                    ) AS overdue_follow_ups
+
+            `, [userId]);
+
+            const data = result.rows[0];
+
+            const totalLeads = Number(data.total_leads);
+            const wonDeals = Number(data.won_deals);
+
+            const conversionRate =
+                totalLeads > 0
+                    ? Number(((wonDeals / totalLeads) * 100).toFixed(2))
+                    : 0;
+
+            return res.status(200).json({
+                success: true,
+                message: "Sales person dashboard report fetched successfully",
+                data: {
+                    total_leads: totalLeads,
+                    total_contacts: Number(data.total_contacts),
+                    total_customers: Number(data.total_customers),
+                    total_deals: Number(data.total_deals),
+                    won_deals: wonDeals,
+                    lost_deals: Number(data.lost_deals),
+                    total_sales: Number(data.total_sales),
+                    total_revenue: Number(data.total_revenue),
+                    pending_follow_ups: Number(data.pending_follow_ups),
+                    overdue_follow_ups: Number(data.overdue_follow_ups),
+                    conversion_rate: conversionRate
+                }
+            });
+        }
+
+
+        // =============================================
+        // OTHER ROLES
+        // =============================================
+
+        return res.status(403).json({
+            success: false,
+            message: "Dashboard access not allowed for this role"
         });
 
     } catch (error) {
+
         console.error("Dashboard report error:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Internal server error"
         });

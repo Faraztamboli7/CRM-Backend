@@ -18,7 +18,7 @@ const router = express.Router();
 
 router.post(
     "/",
-    authenticate,
+    authenticate, 
     authorize("ADMIN"),
     createUser
 );

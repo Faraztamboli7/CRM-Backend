@@ -18,7 +18,7 @@ const {
 router.get(
     "/",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     getActivities
 );
 
@@ -27,7 +27,7 @@ router.get(
 router.get(
     "/:id",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     getActivityById
 );
 
@@ -36,7 +36,7 @@ router.get(
 router.post(
     "/",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     createActivity
 );
 
@@ -45,16 +45,16 @@ router.post(
 router.put(
     "/:id",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     updateActivity
 );
 
 
-// DELETE
+// DELETE - ADMIN ONLY
 router.delete(
     "/:id",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER"),
+    authorize("ADMIN"),
     deleteActivity
 );
 

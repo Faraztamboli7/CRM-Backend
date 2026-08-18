@@ -10,7 +10,7 @@ const createContact = async (req, res) => {
             email,
             phone,
             company,
-            designation,
+            whatsapp_number,
             address,
             city,
             state,
@@ -34,7 +34,7 @@ const createContact = async (req, res) => {
                  JOIN roles r ON u.role_id = r.id
                  WHERE u.id = $1
                  AND u.status = 'ACTIVE'
-                 AND r.name IN ('SALES_PERSON', 'SALES_MANAGER')`,
+                 AND r.name IN ('SALES_PERSON')`,
                 [owner_id]
             );
 
@@ -53,7 +53,7 @@ const createContact = async (req, res) => {
                 email,
                 phone,
                 company,
-                designation,
+                whatsapp_number,
                 address,
                 city,
                 state,
@@ -72,7 +72,7 @@ const createContact = async (req, res) => {
                 email?.trim().toLowerCase() || null,
                 phone?.trim() || null,
                 company?.trim() || null,
-                designation?.trim() || null,
+                whatsapp_number?.trim() || null,
                 address?.trim() || null,
                 city?.trim() || null,
                 state?.trim() || null,
@@ -281,7 +281,7 @@ const updateContact = async (req, res) => {
             email,
             phone,
             company,
-            designation,
+            whatsapp_number,
             address,
             city,
             state,
@@ -321,7 +321,7 @@ const updateContact = async (req, res) => {
                 email = $3,
                 phone = $4,
                 company = $5,
-                designation = $6,
+                whatsapp_number = $6,
                 address = $7,
                 city = $8,
                 state = $9,
@@ -336,7 +336,7 @@ const updateContact = async (req, res) => {
                 email?.trim().toLowerCase() || null,
                 phone?.trim() || null,
                 company?.trim() || null,
-                designation?.trim() || null,
+                whatsapp_number?.trim() || null,
                 address?.trim() || null,
                 city?.trim() || null,
                 state?.trim() || null,
@@ -429,7 +429,7 @@ const assignContact = async (req, res) => {
              JOIN roles r ON u.role_id = r.id
              WHERE u.id = $1
              AND u.status = 'ACTIVE'
-             AND r.name IN ('SALES_PERSON', 'SALES_MANAGER')`,
+             AND r.name IN ('SALES_PERSON')`,
             [owner_id]
         );
 

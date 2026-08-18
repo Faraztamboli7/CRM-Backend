@@ -19,7 +19,7 @@ const router = express.Router();
 router.post(
     "/",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     createContact
 );
 
@@ -28,7 +28,7 @@ router.post(
 router.get(
     "/",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     getContacts
 );
 
@@ -37,7 +37,7 @@ router.get(
 router.get(
     "/:id",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     getContactById
 );
 
@@ -46,25 +46,25 @@ router.get(
 router.put(
     "/:id",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER", "SALES_PERSON"),
+    authorize("ADMIN", "SALES_PERSON"),
     updateContact
 );
 
 
-// Delete
+// Delete - ADMIN ONLY
 router.delete(
     "/:id",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER"),
+    authorize("ADMIN"),
     deleteContact
 );
 
 
-// Assign / reassign
+// Assign / reassign - ADMIN ONLY
 router.patch(
     "/:id/assign",
     authenticate,
-    authorize("ADMIN", "SALES_MANAGER"),
+    authorize("ADMIN"),
     assignContact
 );
 

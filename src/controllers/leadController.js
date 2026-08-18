@@ -9,7 +9,7 @@ const createLead = async (req, res) => {
             email,
             phone,
             company,
-            designation,
+            whatsapp_number,
             source_id,
             status,
             assigned_to,
@@ -49,7 +49,7 @@ const createLead = async (req, res) => {
                  JOIN roles r ON u.role_id = r.id
                  WHERE u.id = $1
                  AND u.status = 'ACTIVE'
-                 AND r.name IN ('SALES_PERSON', 'SALES_MANAGER')`,
+                 AND r.name IN ('SALES_PERSON')`,
                 [assigned_to]
             );
 
@@ -68,7 +68,7 @@ const createLead = async (req, res) => {
                 email,
                 phone,
                 company,
-                designation,
+                whatsapp_number,
                 source_id,
                 status,
                 assigned_to,
@@ -85,7 +85,7 @@ const createLead = async (req, res) => {
                 email?.trim().toLowerCase() || null,
                 phone?.trim() || null,
                 company?.trim() || null,
-                designation?.trim() || null,
+                whatsapp_number?.trim() || null,
                 source_id || null,
                 status || "NEW",
                 assigned_to || null,
@@ -201,7 +201,7 @@ const getLeads = async (req, res) => {
                 l.email,
                 l.phone,
                 l.company,
-                l.designation,
+                l.whatsapp_number,
                 l.status,
                 l.notes,
                 l.created_at,
@@ -269,7 +269,7 @@ const getLeadById = async (req, res) => {
                 l.email,
                 l.phone,
                 l.company,
-                l.designation,
+                l.whatsapp_number,
                 l.status,
                 l.notes,
                 l.created_at,
@@ -356,7 +356,7 @@ const updateLead = async (req, res) => {
             email,
             phone,
             company,
-            designation,
+            whatsapp_number,
             source_id,
             notes
         } = req.body;
@@ -405,7 +405,7 @@ const updateLead = async (req, res) => {
                 email = $3,
                 phone = $4,
                 company = $5,
-                designation = $6,
+                whatsapp_number = $6,
                 source_id = $7,
                 notes = $8,
                 updated_at = CURRENT_TIMESTAMP
@@ -417,7 +417,7 @@ const updateLead = async (req, res) => {
                 email?.trim().toLowerCase() || null,
                 phone?.trim() || null,
                 company?.trim() || null,
-                designation?.trim() || null,
+                whatsapp_number?.trim() || null,
                 source_id || null,
                 notes?.trim() || null,
                 id
@@ -579,7 +579,7 @@ const assignLead = async (req, res) => {
              JOIN roles r ON u.role_id = r.id
              WHERE u.id = $1
              AND u.status = 'ACTIVE'
-             AND r.name IN ('SALES_PERSON', 'SALES_MANAGER')`,
+             AND r.name IN ('SALES_PERSON')`,
             [assigned_to]
         );
 
