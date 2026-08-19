@@ -469,11 +469,230 @@ const getFollowUpReport = async (req, res) => {
     }
 };
 
+// =====================================================
+// 6. INDIVIDUAL SALES PERSON PERFORMANCE
+// =====================================================
+
+const getSalesPersonPerformance = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // Only ADMIN can view another salesperson's data.
+        // SALES_PERSON can only view their own data.
+        if (
+            req.user.role === "SALES_PERSON" &&
+            Number(userId) !== Number(req.user.id)
+        ) {
+            return res.status(403).json({
+                success: false,
+                message: "You can only view your own performance"
+            });
+        }
+
+        // Check user
+        const userResult = await pool.query(
+            `
+            SELECT
+                u.id,
+                u.name,
+                u.email,
+                u.status,
+                r.name AS role
+            FROM users u
+            JOIN roles r
+                ON u.role_id = r.id
+            WHERE u.id = $1
+            `,
+            [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Sales person not found"
+            });
+        }
+
+        const user = userResult.rows[0];
+
+        if (user.role !== "SALES_PERSON") {
+            return res.status(400).json({
+                success: false,
+                message: "Selected user is not a sales person"
+            });
+        }
+
+        // Leads
+        const leadsResult = await pool.query(
+            `
+            SELECT
+                COUNT(*) AS total_leads,
+
+                COUNT(*) FILTER (
+                    WHERE UPPER(status) = 'NEW'
+                ) AS new_leads,
+
+                COUNT(*) FILTER (
+                    WHERE UPPER(status) = 'QUALIFIED'
+                ) AS qualified_leads,
+
+                COUNT(*) FILTER (
+                    WHERE UPPER(status) = 'CONVERTED'
+                ) AS converted_leads,
+
+                COUNT(*) FILTER (
+                    WHERE UPPER(status) = 'LOST'
+                ) AS lost_leads
+
+            FROM leads
+            WHERE assigned_to = $1
+            `,
+            [userId]
+        );
+
+        // Deals
+        const dealsResult = await pool.query(
+            `
+            SELECT
+                COUNT(*) AS total_deals,
+
+                COUNT(*) FILTER (
+                    WHERE UPPER(status) = 'OPEN'
+                ) AS open_deals,
+
+                COUNT(*) FILTER (
+                    WHERE UPPER(stage) = 'CLOSED_WON'
+                ) AS won_deals,
+
+                COUNT(*) FILTER (
+                    WHERE UPPER(stage) = 'CLOSED_LOST'
+                ) AS lost_deals,
+
+                COALESCE(
+                    SUM(amount) FILTER (
+                        WHERE UPPER(stage) = 'CLOSED_WON'
+                    ),
+                    0
+                ) AS won_deal_value
+
+            FROM deals
+            WHERE assigned_to = $1
+            `,
+            [userId]
+        );
+
+        // Customers
+        const customersResult = await pool.query(
+            `
+            SELECT
+                COUNT(*) AS total_customers
+            FROM customers
+            WHERE assigned_to = $1
+            `,
+            [userId]
+        );
+
+        // Sales
+        const salesResult = await pool.query(
+            `
+            SELECT
+                COUNT(*) AS total_sales,
+                COALESCE(SUM(final_amount), 0) AS total_revenue
+            FROM sales
+            WHERE assigned_to = $1
+            `,
+            [userId]
+        );
+
+        // Follow-ups
+        const followUpsResult = await pool.query(
+            `
+            SELECT
+                COUNT(*) AS total_follow_ups,
+
+                COUNT(*) FILTER (
+                    WHERE completed_at IS NULL
+                ) AS pending_follow_ups,
+
+                COUNT(*) FILTER (
+                    WHERE completed_at IS NOT NULL
+                ) AS completed_follow_ups,
+
+                COUNT(*) FILTER (
+                    WHERE completed_at IS NULL
+                    AND scheduled_at < CURRENT_TIMESTAMP
+                ) AS overdue_follow_ups
+
+            FROM follow_ups
+            WHERE assigned_to = $1
+            `,
+            [userId]
+        );
+
+        const leads = leadsResult.rows[0];
+        const deals = dealsResult.rows[0];
+        const customers = customersResult.rows[0];
+        const sales = salesResult.rows[0];
+        const followUps = followUpsResult.rows[0];
+
+        return res.status(200).json({
+            success: true,
+            message: "Sales person performance fetched successfully",
+            data: {
+                sales_person: user,
+
+                leads: {
+                    total: Number(leads.total_leads),
+                    new: Number(leads.new_leads),
+                    qualified: Number(leads.qualified_leads),
+                    converted: Number(leads.converted_leads),
+                    lost: Number(leads.lost_leads)
+                },
+
+                deals: {
+                    total: Number(deals.total_deals),
+                    open: Number(deals.open_deals),
+                    won: Number(deals.won_deals),
+                    lost: Number(deals.lost_deals),
+                    won_value: Number(deals.won_deal_value)
+                },
+
+                customers: {
+                    total: Number(customers.total_customers)
+                },
+
+                sales: {
+                    total: Number(sales.total_sales),
+                    revenue: Number(sales.total_revenue)
+                },
+
+                follow_ups: {
+                    total: Number(followUps.total_follow_ups),
+                    pending: Number(followUps.pending_follow_ups),
+                    completed: Number(followUps.completed_follow_ups),
+                    overdue: Number(followUps.overdue_follow_ups)
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error(
+            "Sales person performance error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
 
 module.exports = {
     getDashboardReport,
     getLeadReport,
     getSalesReport,
     getPerformanceReport,
-    getFollowUpReport
+    getFollowUpReport,
+    getSalesPersonPerformance
 };

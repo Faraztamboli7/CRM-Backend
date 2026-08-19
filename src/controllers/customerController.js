@@ -41,17 +41,17 @@ const convertDealToCustomer = async (req, res) => {
         const deal = dealResult.rows[0];
 
         // Sales Person ownership
-        if (
-            req.user.role === "SALES_PERSON" &&
-            deal.assigned_to !== req.user.id
-        ) {
-            await client.query("ROLLBACK");
+       if (
+    req.user.role === "SALES_PERSON" &&
+    Number(deal.assigned_to) !== Number(req.user.id)
+) {
+    await client.query("ROLLBACK");
 
-            return res.status(403).json({
-                success: false,
-                message: "You can only convert your assigned deals"
-            });
-        }
+    return res.status(403).json({
+        success: false,
+        message: "You can only convert your assigned deals"
+    });
+}
 
         // Deal must be WON
         if (

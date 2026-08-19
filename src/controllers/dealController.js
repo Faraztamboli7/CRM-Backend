@@ -65,10 +65,20 @@ const createDeal = async (req, res) => {
             });
         }
 
-        // Validate lead
+        // ==========================================
+        // DETERMINE DEAL OWNER
+        // ==========================================
+
+        let finalAssignedTo = null;
+
+        // ==========================================
+        // DEAL CREATED FROM LEAD
+        // ==========================================
+
         if (lead_id) {
+
             const leadCheck = await pool.query(
-                `SELECT id
+                `SELECT id, assigned_to
                  FROM leads
                  WHERE id = $1`,
                 [lead_id]
@@ -80,12 +90,47 @@ const createDeal = async (req, res) => {
                     message: "Lead not found"
                 });
             }
+
+            const lead = leadCheck.rows[0];
+
+            // Sales Person must use their own lead
+            if (
+                req.user.role === "SALES_PERSON" &&
+                lead.assigned_to !== req.user.id
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message: "You can only create deals from leads assigned to you"
+                });
+            }
+
+            // If lead already has an owner,
+            // Deal automatically inherits that owner
+            if (lead.assigned_to) {
+                finalAssignedTo = lead.assigned_to;
+            }
+
+            // If Admin creates a deal from an unassigned lead,
+            // Admin can assign it to a Sales Person
+            else if (req.user.role === "ADMIN" && assigned_to) {
+                finalAssignedTo = assigned_to;
+            }
+
+            // If Admin creates a deal from an unassigned lead
+            // without selecting anyone
+            else if (req.user.role === "ADMIN") {
+                finalAssignedTo = req.user.id;
+            }
         }
 
-        // Validate contact
+        // ==========================================
+        // DEAL CREATED FROM CONTACT
+        // ==========================================
+
         if (contact_id) {
+
             const contactCheck = await pool.query(
-                `SELECT id
+                `SELECT id, owner_id
                  FROM contacts
                  WHERE id = $1`,
                 [contact_id]
@@ -97,32 +142,68 @@ const createDeal = async (req, res) => {
                     message: "Contact not found"
                 });
             }
+
+            const contact = contactCheck.rows[0];
+
+            // Sales Person can only create deal
+            // from their own contact
+            if (
+                req.user.role === "SALES_PERSON" &&
+                contact.owner_id !== req.user.id
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message: "You can only create deals from contacts assigned to you"
+                });
+            }
+
+            // Automatically inherit contact owner
+            if (contact.owner_id) {
+                finalAssignedTo = contact.owner_id;
+            }
+
+            // Admin can assign an unassigned contact
+            else if (req.user.role === "ADMIN" && assigned_to) {
+                finalAssignedTo = assigned_to;
+            }
+
+            // Admin creates deal from unassigned contact
+            else if (req.user.role === "ADMIN") {
+                finalAssignedTo = req.user.id;
+            }
         }
 
-        const finalAssignedTo = assigned_to || req.user.id;
+        // ==========================================
+        // VALIDATE FINAL ASSIGNED USER
+        // ==========================================
 
-        // Validate assigned user
-        const userCheck = await pool.query(
-            `SELECT u.id
-             FROM users u
-             JOIN roles r
-                ON u.role_id = r.id
-             WHERE u.id = $1
-             AND u.status = 'ACTIVE'
-             AND r.name IN (
-                'ADMIN',
-                'SALES_MANAGER',
-                'SALES_PERSON'
-             )`,
-            [finalAssignedTo]
-        );
+        if (finalAssignedTo) {
 
-        if (userCheck.rows.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid assigned sales user"
-            });
+            const userCheck = await pool.query(
+                `SELECT u.id
+                 FROM users u
+                 JOIN roles r
+                    ON u.role_id = r.id
+                 WHERE u.id = $1
+                 AND u.status = 'ACTIVE'
+                 AND r.name IN (
+                    'ADMIN',
+                    'SALES_PERSON'
+                 )`,
+                [finalAssignedTo]
+            );
+
+            if (userCheck.rows.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid assigned sales user"
+                });
+            }
         }
+
+        // ==========================================
+        // CREATE DEAL
+        // ==========================================
 
         const result = await pool.query(
             `INSERT INTO deals (
@@ -170,7 +251,6 @@ const createDeal = async (req, res) => {
         });
     }
 };
-
 
 // GET DEALS
 const getDeals = async (req, res) => {
@@ -402,6 +482,10 @@ const getDealById = async (req, res) => {
 // UPDATE DEAL
 const updateDeal = async (req, res) => {
     try {
+
+        console.log("UPDATE DEAL USER:", req.user);
+        console.log("UPDATE DEAL ID:", req.params.id);
+
         const { id } = req.params;
 
         const {
@@ -429,15 +513,24 @@ const updateDeal = async (req, res) => {
 
         const deal = existing.rows[0];
 
-        if (
-            req.user.role === "SALES_PERSON" &&
+        console.log("DEAL FROM DATABASE:", deal);
+        console.log("DEAL ASSIGNED TO:", deal.assigned_to);
+        console.log("LOGGED USER ID:", req.user.id);
+        console.log("ROLE:", req.user.role);
+        console.log(
+            "OWNERSHIP CHECK:",
             deal.assigned_to !== req.user.id
-        ) {
-            return res.status(403).json({
-                success: false,
-                message: "You can only update your assigned deals"
-            });
-        }
+        );
+        
+        if (
+    req.user.role === "SALES_PERSON" &&
+    Number(deal.assigned_to) !== Number(req.user.id)
+) {
+    return res.status(403).json({
+        success: false,
+        message: "You can only update your assigned deals"
+    });
+}
 
         let newStage = stage
             ? stage.toUpperCase()

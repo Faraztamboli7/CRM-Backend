@@ -10,7 +10,8 @@ const {
     getLeadReport,
     getSalesReport,
     getPerformanceReport,
-    getFollowUpReport
+    getFollowUpReport,
+    getSalesPersonPerformance
 } = require("../controllers/reportController");
 
 
@@ -52,6 +53,15 @@ router.get(
     authenticate,
     authorize("ADMIN"),
     getFollowUpReport
+);
+
+// Individual sales person performance
+
+router.get(
+    "/performance/:userId",
+    authenticate,
+    authorize("ADMIN", "SALES_PERSON"),
+    getSalesPersonPerformance
 );
 
 module.exports = router;

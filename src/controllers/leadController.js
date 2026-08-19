@@ -41,25 +41,48 @@ const createLead = async (req, res) => {
             }
         }
 
-        // Validate assigned user
-        if (assigned_to) {
-            const userResult = await pool.query(
-                `SELECT u.id
-                 FROM users u
-                 JOIN roles r ON u.role_id = r.id
-                 WHERE u.id = $1
-                 AND u.status = 'ACTIVE'
-                 AND r.name IN ('SALES_PERSON')`,
-                [assigned_to]
-            );
+        // ==========================================
+        // ASSIGNMENT LOGIC
+        // ==========================================
 
-            if (userResult.rows.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Invalid assigned user"
-                });
+        let finalAssignedTo = null;
+
+        // SALES PERSON:
+        // Automatically assign the lead to themselves
+        if (req.user.role === "SALES_PERSON") {
+            finalAssignedTo = req.user.id;
+        }
+
+        // ADMIN:
+        // Admin can optionally assign the lead
+        else if (req.user.role === "ADMIN") {
+
+            if (assigned_to) {
+
+                const userResult = await pool.query(
+                    `SELECT u.id
+                     FROM users u
+                     JOIN roles r ON u.role_id = r.id
+                     WHERE u.id = $1
+                     AND u.status = 'ACTIVE'
+                     AND r.name = 'SALES_PERSON'`,
+                    [assigned_to]
+                );
+
+                if (userResult.rows.length === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Invalid assigned Sales Person"
+                    });
+                }
+
+                finalAssignedTo = assigned_to;
             }
         }
+
+        // ==========================================
+        // CREATE LEAD
+        // ==========================================
 
         const result = await pool.query(
             `INSERT INTO leads (
@@ -88,7 +111,7 @@ const createLead = async (req, res) => {
                 whatsapp_number?.trim() || null,
                 source_id || null,
                 status || "NEW",
-                assigned_to || null,
+                finalAssignedTo,
                 notes?.trim() || null
             ]
         );
@@ -110,7 +133,6 @@ const createLead = async (req, res) => {
         });
     }
 };
-
 
 // GET ALL LEADS
 const getLeads = async (req, res) => {
